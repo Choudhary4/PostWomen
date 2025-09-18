@@ -291,7 +291,7 @@ app.post('/api/mock-import', (req, res) => {
 });
 
 // Test mock endpoint
-app.post('/api/mock-test', (req, res) => {
+app.post('/api/mock-test', async (req, res) => {
   try {
     const { method, url, body, headers } = req.body;
     const mockRequest = {
@@ -301,7 +301,7 @@ app.post('/api/mock-test', (req, res) => {
       headers: headers || {}
     };
     
-    const result = mockServerService.processMockRequest(mockRequest);
+    const result = await mockServerService.processMockRequest(mockRequest);
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -309,7 +309,7 @@ app.post('/api/mock-test', (req, res) => {
 });
 
 // Mock server catch-all route (should be last)
-app.use('/mock/*', (req, res) => {
+app.use('/mock/*', async (req, res) => {
   try {
     const mockRequest = {
       method: req.method,
@@ -318,7 +318,7 @@ app.use('/mock/*', (req, res) => {
       headers: req.headers
     };
     
-    const result = mockServerService.processMockRequest(mockRequest);
+    const result = await mockServerService.processMockRequest(mockRequest);
     
     if (result.success) {
       // Apply delay if specified

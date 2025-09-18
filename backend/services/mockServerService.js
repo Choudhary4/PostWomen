@@ -1,4 +1,3 @@
-const { faker } = require('@faker-js/faker');
 const path = require('path');
 
 class MockServerService {
@@ -11,6 +10,65 @@ class MockServerService {
       totalConfigs: 0,
       enabledConfigs: 0,
       totalRoutes: 0
+    };
+    this.faker = null; // Will be loaded dynamically
+    this.fakerLoaded = false;
+  }
+
+  // Dynamically load faker (for serverless compatibility)
+  async loadFaker() {
+    if (!this.fakerLoaded) {
+      try {
+        const fakerModule = await import('@faker-js/faker');
+        this.faker = fakerModule.faker;
+        this.fakerLoaded = true;
+      } catch (error) {
+        console.warn('Faker.js not available, using fallback data generation');
+        this.faker = this.createFallbackFaker();
+        this.fakerLoaded = true;
+      }
+    }
+    return this.faker;
+  }
+
+  // Fallback faker implementation for when faker.js is not available
+  createFallbackFaker() {
+    const names = ['John Doe', 'Jane Smith', 'Bob Johnson', 'Alice Brown', 'Charlie Wilson'];
+    const emails = ['user@example.com', 'test@email.com', 'sample@domain.com'];
+    const cities = ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix'];
+    const companies = ['TechCorp', 'DataSoft', 'WebSolutions', 'CloudTech', 'DevCompany'];
+    
+    return {
+      person: {
+        fullName: () => names[Math.floor(Math.random() * names.length)],
+        firstName: () => names[Math.floor(Math.random() * names.length)].split(' ')[0],
+        lastName: () => names[Math.floor(Math.random() * names.length)].split(' ')[1] || 'Smith'
+      },
+      internet: {
+        email: () => emails[Math.floor(Math.random() * emails.length)],
+        url: () => 'https://example.com',
+        userName: () => 'user' + Math.floor(Math.random() * 1000),
+        domainName: () => 'example.com'
+      },
+      location: {
+        streetAddress: () => Math.floor(Math.random() * 9999) + ' Main St',
+        city: () => cities[Math.floor(Math.random() * cities.length)],
+        country: () => 'United States',
+        zipCode: () => Math.floor(Math.random() * 99999).toString().padStart(5, '0')
+      },
+      company: {
+        name: () => companies[Math.floor(Math.random() * companies.length)],
+        buzzPhrase: () => 'Innovative solutions for modern businesses'
+      },
+      lorem: {
+        sentence: () => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+        paragraph: () => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+        words: (count = 3) => Array(count).fill('lorem').join(' ')
+      },
+      number: {
+        int: ({ min = 0, max = 999 } = {}) => Math.floor(Math.random() * (max - min + 1)) + min,
+        float: ({ min = 0, max = 999 } = {}) => Math.random() * (max - min) + min
+      }
     };
   }
 
@@ -123,9 +181,12 @@ class MockServerService {
   }
 
   // Process mock request
-  processMockRequest(req) {
+  async processMockRequest(req) {
     const { method, path: requestPath, body, headers } = req;
     const url = requestPath;
+
+    // Ensure faker is loaded
+    await this.loadFaker();
 
     // Log the request
     const logEntry = {
@@ -153,7 +214,7 @@ class MockServerService {
       this.statistics.matchedRequests++;
 
       const { config, route, params } = matchResult;
-      const response = this.generateResponse(route, params, { body, headers });
+      const response = await this.generateResponse(route, params, { body, headers });
       
       return {
         success: true,
@@ -246,12 +307,12 @@ class MockServerService {
   }
 
   // Generate response with template processing
-  generateResponse(route, params, requestData) {
+  async generateResponse(route, params, requestData) {
     const templateContext = {
       params,
       body: requestData.body,
       headers: requestData.headers,
-      faker: this.createFakerProxy(),
+      faker: await this.createFakerProxy(),
       date: {
         now: new Date().toISOString(),
         timestamp: Date.now(),
@@ -329,37 +390,39 @@ class MockServerService {
   }
 
   // Create faker proxy for template usage
-  createFakerProxy() {
+  async createFakerProxy() {
+    await this.loadFaker();
+    
     return {
       name: {
-        fullName: () => faker.person.fullName(),
-        firstName: () => faker.person.firstName(),
-        lastName: () => faker.person.lastName()
+        fullName: () => this.faker.person.fullName(),
+        firstName: () => this.faker.person.firstName(),
+        lastName: () => this.faker.person.lastName()
       },
       internet: {
-        email: () => faker.internet.email(),
-        url: () => faker.internet.url(),
-        username: () => faker.internet.userName(),
-        domain: () => faker.internet.domainName()
+        email: () => this.faker.internet.email(),
+        url: () => this.faker.internet.url(),
+        username: () => this.faker.internet.userName(),
+        domain: () => this.faker.internet.domainName()
       },
       address: {
-        street: () => faker.location.streetAddress(),
-        city: () => faker.location.city(),
-        country: () => faker.location.country(),
-        zipCode: () => faker.location.zipCode()
+        street: () => this.faker.location.streetAddress(),
+        city: () => this.faker.location.city(),
+        country: () => this.faker.location.country(),
+        zipCode: () => this.faker.location.zipCode()
       },
       company: {
-        name: () => faker.company.name(),
-        industry: () => faker.company.buzzPhrase()
+        name: () => this.faker.company.name(),
+        industry: () => this.faker.company.buzzPhrase()
       },
       lorem: {
-        sentence: () => faker.lorem.sentence(),
-        paragraph: () => faker.lorem.paragraph(),
-        words: (count = 3) => faker.lorem.words(count)
+        sentence: () => this.faker.lorem.sentence(),
+        paragraph: () => this.faker.lorem.paragraph(),
+        words: (count = 3) => this.faker.lorem.words(count)
       },
       number: {
-        int: (min = 0, max = 999) => faker.number.int({ min, max }),
-        float: (min = 0, max = 999) => faker.number.float({ min, max })
+        int: (min = 0, max = 999) => this.faker.number.int({ min, max }),
+        float: (min = 0, max = 999) => this.faker.number.float({ min, max })
       }
     };
   }
