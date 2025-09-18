@@ -719,6 +719,10 @@ app.post('/api/themes/reset', (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+app.get('/', (req, res) => {
+  res.send('🚀 PostWomen Backend is running!');
+});
+
 
 // ============ END THEME ENDPOINTS ============
 
