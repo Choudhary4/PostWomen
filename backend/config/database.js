@@ -1,40 +1,49 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
+// Handle connection caching for serverless
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
 const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+  // If already connected, return the existing connection
+  if (cached.conn) {
+    return cached.conn;
+  }
 
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+  // If no connection promise, create one
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+    };
 
-    // Handle connection events
-    mongoose.connection.on('error', (err) => {
-      console.error('❌ MongoDB connection error:', err);
-    });
+    // Use MongoDB Atlas URI if available, otherwise use local MongoDB
+    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/postwoman';
 
-    mongoose.connection.on('disconnected', () => {
-      console.log('🔌 MongoDB disconnected');
-    });
-
-    // Graceful shutdown
-    process.on('SIGINT', async () => {
-      try {
-        await mongoose.connection.close();
-        console.log('🔐 MongoDB connection closed through app termination');
-        process.exit(0);
-      } catch (error) {
-        console.error('Error closing MongoDB connection:', error);
+    cached.promise = mongoose.connect(mongoURI, opts).then((mongoose) => {
+      console.log(`✅ MongoDB Connected: ${mongoose.connection.host}`);
+      return mongoose;
+    }).catch((error) => {
+      console.error('❌ MongoDB connection failed:', error.message);
+      
+      // In serverless environment, don't exit process
+      if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+        throw error;
+      } else {
         process.exit(1);
       }
     });
+  }
 
-    return conn;
+  try {
+    cached.conn = await cached.promise;
+    return cached.conn;
   } catch (error) {
-    console.error('❌ MongoDB connection failed:', error.message);
-    process.exit(1);
+    cached.promise = null;
+    throw error;
   }
 };
 

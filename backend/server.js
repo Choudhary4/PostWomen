@@ -13,7 +13,6 @@ const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 
 const app = express();
-const PORT = process.env.PORT || 9000;
 
 // Connect to MongoDB
 connectDB();
@@ -724,20 +723,25 @@ app.post('/api/themes/reset', (req, res) => {
 // ============ END THEME ENDPOINTS ============
 
 // Start server
-// app.listen(PORT, () => {
-//   console.log(`🚀 PostWomen Backend running on port ${PORT}`);
-//   console.log(`📡 Proxy endpoint: http://localhost:${PORT}/api/proxy`);
-//   console.log(`🎭 Mock Server: http://localhost:${PORT}/mock/*`);
-//   console.log(`🔌 WebSocket Testing: http://localhost:${PORT}/api/websocket/*`);
-//   console.log(`🎨 Theme Management: http://localhost:${PORT}/api/themes/*`);
-//   console.log(`🔐 Authentication: http://localhost:${PORT}/api/auth/*`);
-//   console.log(`👨‍💼 Admin Panel: http://localhost:${PORT}/api/admin/*`);
-//   console.log(`\n🎯 Phase 3 Professional Features:`);
-//   console.log(`   ✅ Mock Server with dynamic data generation`);
-//   console.log(`   ✅ WebSocket Testing with real-time messaging`);
-//   console.log(`   ✅ Dark Mode & Themes with user preferences`);
-//   console.log(`   ✅ User Authentication with JWT & MongoDB`);
-//   console.log(`   ✅ Admin Panel with role-based access control`);
-// });
+const PORT = process.env.PORT || 9000;
+
+// Only start server if not in Vercel environment
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 PostWomen Backend running on port ${PORT}`);
+    console.log(`📡 Proxy endpoint: http://localhost:${PORT}/api/proxy`);
+    console.log(`🎭 Mock Server: http://localhost:${PORT}/mock/*`);
+    console.log(`🔌 WebSocket Testing: http://localhost:${PORT}/api/websocket/*`);
+    console.log(`🎨 Theme Management: http://localhost:${PORT}/api/themes/*`);
+    console.log(`🔐 Authentication: http://localhost:${PORT}/api/auth/*`);
+    console.log(`👨‍💼 Admin Panel: http://localhost:${PORT}/api/admin/*`);
+    console.log(`\n🎯 Phase 3 Professional Features:`);
+    console.log(`   ✅ Mock Server with dynamic data generation`);
+    console.log(`   ✅ WebSocket Testing with real-time messaging`);
+    console.log(`   ✅ Dark Mode & Themes with user preferences`);
+    console.log(`   ✅ User Authentication with JWT & MongoDB`);
+    console.log(`   ✅ Admin Panel with role-based access control`);
+  });
+}
 
 module.exports = app;
