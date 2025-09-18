@@ -19,6 +19,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.1",
     "react-router-dom": "^7.9.1",
+    "serverless-http": "^4.0.0",
     "uuid": "^13.0.0",
     "ws": "^8.18.3"
   },
